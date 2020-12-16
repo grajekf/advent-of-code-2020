@@ -27,6 +27,7 @@ namespace _16a
             // {
             //     Console.WriteLine(ticket);
             // }
+            Console.WriteLine(nearbyTickets.Select(t => t.GetErrorRate(rules)).Sum());
         }
     }
 
@@ -83,6 +84,11 @@ namespace _16a
             return $"{Field}: {rangesString}";
         }
 
+        public bool IsValidForAny(int value)
+        {
+            return Ranges.Any(r => r.IsInside(value));
+        }
+
     }
 
     class Ticket
@@ -102,6 +108,11 @@ namespace _16a
         public override string ToString()
         {
             return string.Join(",", Values.Select(v => v.ToString()));
+        }
+
+        public int GetErrorRate(IEnumerable<Rule> rules)
+        {
+            return Values.Where(v => !rules.Any(r => r.IsValidForAny(v))).Sum();
         }
     }
 }
