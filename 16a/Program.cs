@@ -14,10 +14,19 @@ namespace _16a
             var lines = inputString.Split("\r\n");
             var rules = lines.Take(20).Select(l => Rule.Parse(l));
 
-            foreach (var rule in rules)
-            {
-                Console.WriteLine(rule.ToString());
-            }
+            // foreach (var rule in rules)
+            // {
+            //     Console.WriteLine(rule.ToString());
+            // }
+
+            var myTicket = Ticket.Parse(lines[22]);
+            var nearbyTickets = lines.Skip(25).Select(Ticket.Parse);
+
+            // Console.WriteLine(myTicket);
+            // foreach (var ticket in nearbyTickets)
+            // {
+            //     Console.WriteLine(ticket);
+            // }
         }
     }
 
@@ -74,5 +83,25 @@ namespace _16a
             return $"{Field}: {rangesString}";
         }
 
+    }
+
+    class Ticket
+    {
+        public Ticket(IEnumerable<int> values)
+        {
+            Values = values;
+        }
+
+        public IEnumerable<int> Values { get; set; }
+
+        public static Ticket Parse(string inp)
+        {
+            return new Ticket(inp.Split(",").Select(int.Parse));
+        }
+
+        public override string ToString()
+        {
+            return string.Join(",", Values.Select(v => v.ToString()));
+        }
     }
 }
