@@ -16,7 +16,9 @@ namespace _19b
             var messageLines = inputSplit[1].Split("\r\n");
 
             var rules = ruleLines.SelectMany(r => Rule.Parse(r)).ToList();
+            RemoveRulesWithTooManyNonTerminals(rules);
             RemoveUnitRules(rules);
+
             var count = 0;
             for (int i = 0; i < messageLines.Length; i++)
             {
@@ -30,6 +32,30 @@ namespace _19b
             }
 
             Console.WriteLine(count);
+        }
+
+        static void RemoveRulesWithTooManyNonTerminals(IList<Rule> rules)
+        {
+            var rulesToReplace = rules.Where(r => r is GrammarRule).Cast<GrammarRule>().Where(r => r.Right.Count > 2).ToList();
+            var nextFreeRuleId = rules.Select(r => r.Left).Max() + 1;
+
+            foreach (var ruleToReplace in rulesToReplace)
+            {
+                Console.WriteLine($"To Replace: {ruleToReplace}");
+                var currentLeft = ruleToReplace.Left;
+                var rightCount = ruleToReplace.Right.Count;
+                for (int i = 0; i < rightCount - 1; i++)
+                {
+                    var rightItem = ruleToReplace.Right[i];
+                    var newLastRight = i == rightCount - 2 ? ruleToReplace.Right.Last() : nextFreeRuleId;
+                    rules.Add(new GrammarRule(new int[] { rightItem, newLastRight }, currentLeft));
+                    Console.WriteLine($"New rule: {rules.Last()}");
+                    currentLeft = nextFreeRuleId;
+                    nextFreeRuleId++;
+                }
+
+                rules.Remove(ruleToReplace);
+            }
         }
 
         static void RemoveUnitRules(IList<Rule> rules)
