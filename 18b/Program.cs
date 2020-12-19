@@ -19,21 +19,11 @@ namespace _18b
                 return tree.Evaluate();
             }).Sum());
 
-            // long sum = 0;
-            // foreach (var line in lines)
-            // {
-            //     var tokens = Tokenize(line);
-            //     var tree = ToAbstractSyntaxTree(tokens);
-            //     var value = tree.Evaluate();
-            //     sum = sum + value;
-            //     Console.WriteLine(line);
-            //     Console.WriteLine($"Value: {value} Sum: {sum}");
-            // }
-            // var test = "4 * (3 * (6 + 1) + 2)";
+            // var test = "5 * 9 * (7 * 3 * 3 + 9 * 3 + (8 + 6 * 4))";
             // var tokens = Tokenize(test).ToList();
             // foreach (var token in tokens)
             // {
-            //     Console.WriteLine($"{token} {GetType(token).ToString()}");
+            //     Console.WriteLine($"{token.Value} {token.Type.ToString()}");
             // }
 
             // var tree = ToAbstractSyntaxTree(tokens);
@@ -43,66 +33,90 @@ namespace _18b
 
         }
 
-        public static IEnumerable<string> Tokenize(string input)
+        public static IEnumerable<Token> Tokenize(string input)
         {
             var token = string.Empty;
             foreach (var c in input)
             {
                 if (c == ' ')
                     continue;
-                yield return c.ToString();
+                var value = c.ToString();
+                var type = GetType(value);
+
+                yield return new Token(value, type);
             }
         }
 
-        public static Node ToAbstractSyntaxTree(IList<string> tokens)
+        public static Node ToAbstractSyntaxTree(IList<Token> tokens)
         {
-            Node current = null;
+            Stack<Node> operators = new Stack<Node>();
+            Stack<Node> arguments = new Stack<Node>();
 
-            // var tokensCopy = tokens.ToList();
+            bool afterArgument = false;
 
             while (tokens.Count > 0)
             {
                 var currentToken = tokens.First();
                 tokens.RemoveAt(0);
-                var tokenType = GetType(currentToken);
 
-                switch (tokenType)
+                if (afterArgument)
                 {
-                    case SymbolType.LParen:
-                        var insideNode = ToAbstractSyntaxTree(tokens);
-                        if (current == null)
-                        {
-                            current = insideNode;
-                        }
-                        else
-                        {
-                            current.Right = insideNode;
-                        }
-                        break;
-                    case SymbolType.RParen:
-                        return current;
-                    case SymbolType.Number:
-                        Node numberNode = new NumberNode(long.Parse(currentToken));
-                        if (current == null)
-                        {
-                            current = numberNode;
-                        }
-                        else
-                        {
-                            current.Right = numberNode;
-                        }
-                        break;
-                    case SymbolType.Plus:
-                    case SymbolType.Multiply:
-                        Node opNode = tokenType == SymbolType.Plus ? new PlusNode() : new MultiplyNode();
-                        opNode.Left = current;
-                        current = opNode;
-                        break;
-                }
+                    if (currentToken.Type == SymbolType.RParen)
+                    {
+                        Node op;
 
+                        while (operators.TryPop(out op) && op.Type != SymbolType.LParen)
+                        {
+                            CreateOperation(op, arguments);
+                        }
+                        continue;
+                    }
+                    else
+                    {
+                        afterArgument = false;
+                        var op = currentToken.ToNode();
+                        while (operators.Count > 0
+                            && operators.Peek().Type != SymbolType.LParen
+                            && operators.Peek().Precedence > op.Precedence)
+                        {
+                            CreateOperation(operators.Pop(), arguments);
+                        }
+                        operators.Push(op);
+                    }
+                }
+                else
+                {
+                    if (currentToken.Type == SymbolType.LParen)
+                    {
+                        operators.Push(currentToken.ToNode());
+                    }
+                    else
+                    {
+                        afterArgument = true;
+                        arguments.Push(currentToken.ToNode());
+                    }
+                }
             }
 
-            return current;
+            while (operators.Count > 0)
+            {
+                Node op = operators.Pop();
+                if (op.Type == SymbolType.LParen)
+                {
+                    throw new Exception("Unexpected left parenthesis");
+                }
+                CreateOperation(op, arguments);
+            }
+
+            var result = arguments.Pop();
+            if (arguments.Count > 0)
+            {
+                throw new Exception("Not empty arguments stack after parsing");
+            }
+
+            return result;
+
+
         }
 
         private static SymbolType GetType(string s)
@@ -120,6 +134,16 @@ namespace _18b
 
             throw new Exception("Unrecognized symbol type");
         }
+
+        private static void CreateOperation(Node op, Stack<Node> arguments)
+        {
+            var left = arguments.Pop();
+            var right = arguments.Pop();
+
+            op.Left = left;
+            op.Right = right;
+            arguments.Push(op);
+        }
     }
 
     enum SymbolType
@@ -131,10 +155,50 @@ namespace _18b
         Multiply
     }
 
+    class Token
+    {
+        public Token(string value, SymbolType type)
+        {
+            Value = value;
+            Type = type;
+        }
+
+        public string Value { get; private set; }
+        public SymbolType Type { get; private set; }
+
+        public Node ToNode()
+        {
+            switch (Type)
+            {
+                case SymbolType.LParen:
+                    return new LParenNode();
+                case SymbolType.RParen:
+                    return new RParenNode();
+                case SymbolType.Plus:
+                    return new PlusNode();
+                case SymbolType.Multiply:
+                    return new MultiplyNode();
+                case SymbolType.Number:
+                    return new NumberNode(long.Parse(Value));
+            }
+
+            throw new Exception("Cannot infer Node type");
+
+        }
+    }
+
     abstract class Node
     {
+        protected Node(SymbolType type)
+        {
+            Type = type;
+        }
+
         public Node Left { get; set; }
         public Node Right { get; set; }
+        public SymbolType Type { get; set; }
+
+        public abstract int Precedence { get; }
 
         public abstract long Evaluate();
         public void Print(int level = 0)
@@ -159,6 +223,12 @@ namespace _18b
 
     class PlusNode : Node
     {
+        public PlusNode() : base(SymbolType.Plus)
+        {
+        }
+
+        public override int Precedence => 2;
+
         public override long Evaluate()
         {
             return Left.Evaluate() + Right.Evaluate();
@@ -172,6 +242,11 @@ namespace _18b
 
     class MultiplyNode : Node
     {
+        public MultiplyNode() : base(SymbolType.Multiply)
+        {
+        }
+
+        public override int Precedence => 1;
         public override long Evaluate()
         {
             return Left.Evaluate() * Right.Evaluate();
@@ -185,7 +260,8 @@ namespace _18b
 
     class NumberNode : Node
     {
-        public NumberNode(long value)
+        public override int Precedence => throw new NotImplementedException();
+        public NumberNode(long value) : base(SymbolType.Number)
         {
             Value = value;
         }
@@ -203,6 +279,44 @@ namespace _18b
         protected override void PrintSelf()
         {
             Console.WriteLine(Value);
+        }
+    }
+
+    class LParenNode : Node
+    {
+        public LParenNode() : base(SymbolType.LParen)
+        {
+        }
+
+        public override int Precedence => throw new NotImplementedException();
+
+        public override long Evaluate()
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override void PrintSelf()
+        {
+            Console.WriteLine("(");
+        }
+    }
+
+    class RParenNode : Node
+    {
+        public RParenNode() : base(SymbolType.RParen)
+        {
+        }
+
+        public override int Precedence => throw new NotImplementedException();
+
+        public override long Evaluate()
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override void PrintSelf()
+        {
+            Console.WriteLine(")");
         }
     }
 
