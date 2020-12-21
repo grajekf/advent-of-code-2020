@@ -15,6 +15,13 @@ namespace _20b
 
             var tiles = tileStrings.Select(Tile.Parse).ToList();
 
+            var solutionMap = GetSolutionMap(tiles);
+
+
+        }
+
+        static Tile[,] GetSolutionMap(IEnumerable<Tile> tiles)
+        {
             var borderDict = tiles
                 .SelectMany(t => t.GetPossibleBorders().Select(b => (Tile: t, Border: b)))
                 .GroupBy(p => p.Border)
@@ -31,9 +38,9 @@ namespace _20b
             }
             unusedTiles.Remove(topLeftTile.Id);
 
-            Console.WriteLine(topLeftTile);
+            // Console.WriteLine(topLeftTile);
 
-            int solutionMapSize = (int)Math.Sqrt(tiles.Count);
+            int solutionMapSize = (int)Math.Sqrt(tiles.Count());
             Tile[,] solutionMap = new Tile[solutionMapSize, solutionMapSize];
             solutionMap[0, 0] = topLeftTile;
 
@@ -60,17 +67,6 @@ namespace _20b
                         var tileLeft = solutionMap[i, j - 1];
                         leftBorderToFind = tileLeft.GetBorder(BorderDirection.Right);
                     }
-
-                    if (leftBorderToFind != null)
-                    {
-                        Console.WriteLine(leftBorderToFind);
-                        Console.WriteLine(string.Join(", ", borderDict[leftBorderToFind].Select(x => x.Tile.Id)));
-                    }
-                    if (topBorderToFind != null)
-                    {
-                        Console.WriteLine(topBorderToFind);
-                        Console.WriteLine(string.Join(", ", borderDict[topBorderToFind].Select(x => x.Tile.Id)));
-                    }
                     var possibleNextTiles = new List<Tile>();
 
                     if (leftBorderToFind != null)
@@ -82,87 +78,54 @@ namespace _20b
                         possibleNextTiles.AddRange(borderDict[topBorderToFind].Select(x => x.Tile));
                     }
                     var nextTile = possibleNextTiles.First(t => unusedTiles.Contains(t.Id));
-
-                    Console.WriteLine("Next tile:");
-                    Console.WriteLine(nextTile);
-
-
                     nextTile = RotateUntilMatches(nextTile, leftBorderToFind, topBorderToFind);
+                    // nextTile = possibleAfterTransform.Single();
 
-                    Console.WriteLine("Next tile after transformations:");
-                    Console.WriteLine(nextTile);
-
-                    // while ((leftBorderToFind == null
-                    //         || (nextTile.GetBorder(BorderDirection.Left) != leftBorderToFind) && (nextTile.GetBorder(BorderDirection.LeftReverse) != leftBorderToFind))
-                    //     && (topBorderToFind == null
-                    //         || nextTile.GetBorder(BorderDirection.Top) != topBorderToFind) && (nextTile.GetBorder(BorderDirection.TopReverse) != topBorderToFind))
-                    // {
-                    //     nextTile = nextTile.RotateClockwise();
-                    // }
-
-                    // Console.WriteLine("Next tile after rotation:");
+                    // Console.WriteLine("Next tile after transformations:");
                     // Console.WriteLine(nextTile);
-
-                    // if (leftBorderToFind != null && nextTile.GetBorder(BorderDirection.Left) != leftBorderToFind)
-                    // {
-                    //     nextTile = nextTile.FlipVertical();
-                    // }
-
-                    // if (topBorderToFind != null && nextTile.GetBorder(BorderDirection.Top) != topBorderToFind)
-                    // {
-                    //     nextTile = nextTile.FlipHorizontal();
-                    // }
-
-                    // Console.WriteLine("Next tile after flips:");
-                    // Console.WriteLine(nextTile);
-
-                    // var matchedBordersCount = nextTile.GetPossibleBorders().Count(b => borderDict[b].Count > 1) / 2;
-                    // Console.WriteLine($"Matched borders: {matchedBordersCount}");
-
-                    Console.WriteLine($"Setting position {i},{j}");
 
                     solutionMap[i, j] = nextTile;
                     unusedTiles.Remove(nextTile.Id);
                 }
             }
 
-            Tile RotateUntilMatches(Tile tile, string leftBorderToFind, string topBorderToFind)
+            return solutionMap;
+        }
+
+        static Tile RotateUntilMatches(Tile tile, string leftBorderToFind, string topBorderToFind)
+        {
+            for (int t = 0; t <= 1; t++)
             {
-                for (int rotateCount = 0; rotateCount <= 3; rotateCount++)
+                for (int h = 0; h <= 1; h++)
                 {
-                    for (int h = 0; h <= 1; h++)
+                    for (int v = 0; v <= 1; v++)
                     {
-                        for (int v = 0; v <= 1; v++)
+                        var afterTransformations = tile;
+                        if (t > 0)
                         {
-                            var afterTransformations = tile;
-                            for (int r = 0; r < rotateCount; r++)
-                            {
-                                afterTransformations = afterTransformations.RotateClockwise();
-                            }
-                            if (h > 0)
-                            {
-                                afterTransformations = afterTransformations.FlipHorizontal();
-                            }
-                            if (v > 0)
-                            {
-                                afterTransformations = afterTransformations.FlipVertical();
-                            }
+                            afterTransformations = afterTransformations.Transpose();
+                        }
+                        if (h > 0)
+                        {
+                            afterTransformations = afterTransformations.FlipHorizontal();
+                        }
+                        if (v > 0)
+                        {
+                            afterTransformations = afterTransformations.FlipVertical();
+                        }
 
-                            //TODO: Jakos tak obracac zeby na zewnatrz byly odpowiednie granice
-
-                            if (leftBorderToFind == null
-                                    || (afterTransformations.GetBorder(BorderDirection.Left) == leftBorderToFind)
-                                && (topBorderToFind == null
-                                    || afterTransformations.GetBorder(BorderDirection.Top) == topBorderToFind))
-                            {
-                                return afterTransformations;
-                            }
+                        if ((leftBorderToFind == null
+                                || afterTransformations.GetBorder(BorderDirection.Left) == leftBorderToFind)
+                            && (topBorderToFind == null
+                                || afterTransformations.GetBorder(BorderDirection.Top) == topBorderToFind))
+                        {
+                            return afterTransformations;
                         }
                     }
                 }
-
-                throw new Exception("No transformation found...");
             }
+
+            throw new Exception("No transformation found...");
         }
     }
 
@@ -266,6 +229,24 @@ namespace _20b
 
         public Tile RotateClockwise()
         {
+            // var newImage = new char[Image.Length][];
+
+            // for (int i = 0; i < Image.Length; i++)
+            // {
+            //     newImage[i] = new char[Image[i].Length];
+            //     for (int j = 0; j < Image[i].Length; j++)
+            //     {
+            //         newImage[i][j] = Image[j][i];
+            //     }
+            // }
+
+            // return new Tile(Id, newImage).FlipHorizontal();
+
+            return this.Transpose().FlipHorizontal();
+        }
+
+        public Tile Transpose()
+        {
             var newImage = new char[Image.Length][];
 
             for (int i = 0; i < Image.Length; i++)
@@ -277,7 +258,7 @@ namespace _20b
                 }
             }
 
-            return new Tile(Id, newImage).FlipHorizontal();
+            return new Tile(Id, newImage);
         }
 
     }
