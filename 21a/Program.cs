@@ -37,6 +37,37 @@ namespace _21a
             var ingredientsWithoutAllergens = allIngredients.Where(i => possibleAllergensDict[i].Count == 0);
             Console.WriteLine(ingredientsWithoutAllergens.Sum(i => foodList.Count(f => f.Ingredients.Contains(i))));
 
+            var ingredientsWithAllergens = allIngredients.Where(i => possibleAllergensDict[i].Count > 0).ToList();
+
+            bool change = true;
+
+            while (change)
+            {
+                change = false;
+                var withOneAllergen = ingredientsWithAllergens.Where(i => possibleAllergensDict[i].Count == 1);
+                foreach (var i in withOneAllergen)
+                {
+                    var allergen = possibleAllergensDict[i].Single();
+                    foreach (var other in
+                        ingredientsWithAllergens.Where(o => possibleAllergensDict[o].Contains(allergen)))
+                    {
+                        if (other != i)
+                        {
+                            possibleAllergensDict[other].Remove(allergen);
+                            change = true;
+                        }
+                    }
+                }
+
+            }
+
+            foreach (var i in ingredientsWithAllergens)
+            {
+                Console.WriteLine($"{i}: {string.Join(", ", possibleAllergensDict[i])}");
+            }
+
+            Console.WriteLine(string.Join(",", ingredientsWithAllergens.OrderBy(i => possibleAllergensDict[i].Single())));
+
         }
     }
 
