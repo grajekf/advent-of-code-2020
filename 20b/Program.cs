@@ -3,11 +3,17 @@ using System.Linq;
 using System.IO;
 using System.Text;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace _20b
 {
     class Program
     {
+
+        static private string Seamonster =
+@"                  # 
+#    ##    ##    ###
+ #  #  #  #  #  #   ";
         static void Main(string[] args)
         {
             var inputString = File.ReadAllText("input.txt");
@@ -16,8 +22,12 @@ namespace _20b
             var tiles = tileStrings.Select(Tile.Parse).ToList();
 
             var solutionMap = GetSolutionMap(tiles);
+            var fullImage = ToFullImage(solutionMap);
 
+            var seamonsters = GetSeamonsterPositions(fullImage).ToList();
+            var seaMonsterHashCount = 15;
 
+            Console.WriteLine(GetWaveCount(fullImage, seamonsters.Count, seaMonsterHashCount));
         }
 
         static Tile[,] GetSolutionMap(IEnumerable<Tile> tiles)
@@ -37,8 +47,6 @@ namespace _20b
                 topLeftTile = topLeftTile.RotateClockwise();
             }
             unusedTiles.Remove(topLeftTile.Id);
-
-            // Console.WriteLine(topLeftTile);
 
             int solutionMapSize = (int)Math.Sqrt(tiles.Count());
             Tile[,] solutionMap = new Tile[solutionMapSize, solutionMapSize];
@@ -79,10 +87,6 @@ namespace _20b
                     }
                     var nextTile = possibleNextTiles.First(t => unusedTiles.Contains(t.Id));
                     nextTile = RotateUntilMatches(nextTile, leftBorderToFind, topBorderToFind);
-                    // nextTile = possibleAfterTransform.Single();
-
-                    // Console.WriteLine("Next tile after transformations:");
-                    // Console.WriteLine(nextTile);
 
                     solutionMap[i, j] = nextTile;
                     unusedTiles.Remove(nextTile.Id);
@@ -126,6 +130,109 @@ namespace _20b
             }
 
             throw new Exception("No transformation found...");
+        }
+
+        static char[,] ToFullImage(Tile[,] map)
+        {
+            var mapSize = map.GetLength(0);
+            var tileSizeWithoutBorders = map[0, 0].Image.Length - 2;
+            var resultSize = mapSize * tileSizeWithoutBorders;
+
+            var result = new char[resultSize, resultSize];
+
+            for (int i = 0; i < mapSize; i++)
+            {
+                for (int j = 0; j < mapSize; j++)
+                {
+                    var x = j * tileSizeWithoutBorders;
+                    var y = i * tileSizeWithoutBorders;
+
+                    var imageToPaste = map[i, j].GetImageWithoutBorders();
+                    Paste(result, imageToPaste, x, y);
+                }
+            }
+
+            return result;
+        }
+
+        static IEnumerable<(int x, int y)> GetSeamonsterPositions(char[,] image)
+        {
+            var seamonsterLines = Seamonster.Replace(" ", ".").Split("\r\n");
+            var seamonsterWidth = seamonsterLines[0].Length;
+            var firstRowRegex = new Regex(seamonsterLines[0]);
+            var middleRowRegex = new Regex(seamonsterLines[1]);
+            var lastRowRegex = new Regex(seamonsterLines[2]);
+
+            var imageAsStrings = new List<string>();
+
+            for (int i = 0; i < image.GetLength(0); i++)
+            {
+                imageAsStrings.Add(ExtractString(image, 0, i, image.GetLength(1)));
+            }
+
+            for (int i = 1; i < image.GetLength(0); i++)
+            {
+                var row = imageAsStrings[i];
+                foreach (Match match in middleRowRegex.Matches(row))
+                {
+                    var x = match.Index;
+
+                    var above = ExtractString(image, x, i - 1, seamonsterWidth);
+                    if (!firstRowRegex.IsMatch(above))
+                        continue;
+
+                    var below = ExtractString(image, x, i + 1, seamonsterWidth);
+                    if (!lastRowRegex.IsMatch(below))
+                        continue;
+
+                    yield return (x, i - 1);
+                }
+
+            }
+        }
+
+        static int GetWaveCount(char[,] image, int seaMonsterCount, int seaMonsterHashCount)
+        {
+            int result = 0;
+
+            for (int i = 0; i < image.GetLength(0); i++)
+            {
+                for (int j = 0; j < image.GetLength(1); j++)
+                {
+                    if (image[i, j] == '#')
+                        result++;
+                }
+            }
+
+            return result - (seaMonsterCount + 1) * seaMonsterHashCount;
+        }
+
+        static string ExtractString(char[,] source, int x, int y, int lenght, int height = 1)
+        {
+            var sb = new StringBuilder();
+            for (int i = 0; i < height; i++)
+            {
+                for (int j = 0; j < lenght; j++)
+                {
+                    sb.Append(source[y + i, x + j]);
+                }
+
+                if (i != height - 1)
+                    sb.AppendLine();
+            }
+
+            return sb.ToString();
+        }
+
+        static void Paste(char[,] target, char[,] source, int x, int y)
+        {
+            for (int i = 0; i < source.GetLength(0); i++)
+            {
+                for (int j = 0; j < source.GetLength(1); j++)
+                {
+                    target[y + i, x + j] = source[i, j];
+                }
+            }
         }
     }
 
@@ -229,19 +336,6 @@ namespace _20b
 
         public Tile RotateClockwise()
         {
-            // var newImage = new char[Image.Length][];
-
-            // for (int i = 0; i < Image.Length; i++)
-            // {
-            //     newImage[i] = new char[Image[i].Length];
-            //     for (int j = 0; j < Image[i].Length; j++)
-            //     {
-            //         newImage[i][j] = Image[j][i];
-            //     }
-            // }
-
-            // return new Tile(Id, newImage).FlipHorizontal();
-
             return this.Transpose().FlipHorizontal();
         }
 
@@ -259,6 +353,22 @@ namespace _20b
             }
 
             return new Tile(Id, newImage);
+        }
+
+        public char[,] GetImageWithoutBorders()
+        {
+            var imageSize = Image.Length - 2;
+            var result = new char[imageSize, imageSize];
+
+            for (int i = 1; i < Image.Length - 1; i++)
+            {
+                for (int j = 1; j < Image.Length - 1; j++)
+                {
+                    result[i - 1, j - 1] = Image[i][j];
+                }
+            }
+
+            return result;
         }
 
     }
