@@ -2,6 +2,7 @@
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace _22a
 {
@@ -11,15 +12,18 @@ namespace _22a
         {
             var inputString = File.ReadAllText("input.txt");
             var state = GameState.Parse(inputString);
+            // var state = new GameState(new int[] { 9, 2, 6, 3, 1 }, new int[] { 5, 8, 4, 7, 10 });
 
-            while (!state.IsGameFinished)
-            {
-                state = state.Step();
-            }
+            state = GameState.RunGame(state);
+            Console.WriteLine("Game finished!");
+
+            Console.WriteLine(state);
 
             Console.WriteLine(state.GetScore(Player.One));
             Console.WriteLine(state.GetScore(Player.Two));
+
         }
+
 
     }
 
@@ -35,6 +39,13 @@ namespace _22a
         }
 
         public bool IsGameFinished => _playerOneDeck.Count() == 0 || _playerTwoDeck.Count() == 0;
+        public Player GetGameWinner()
+        {
+            if (_playerOneDeck.Count() == 0)
+                return Player.Two;
+
+            return Player.One;
+        }
         public int GetScore(Player player)
         {
             var deckToCheck = player == Player.Two ? _playerTwoDeck : _playerOneDeck;
@@ -59,18 +70,68 @@ namespace _22a
             var playerTwoCard = deckTwoCopy.First();
             deckTwoCopy.RemoveAt(0);
 
-            if (playerOneCard > playerTwoCard)
+            var winner = GetStepWinner(playerOneCard, playerTwoCard);
+
+            if (winner == Player.One)
             {
                 deckOneCopy.Add(playerOneCard);
                 deckOneCopy.Add(playerTwoCard);
             }
-            else
+
+            if (winner == Player.Two)
             {
                 deckTwoCopy.Add(playerTwoCard);
                 deckTwoCopy.Add(playerOneCard);
             }
 
             return new GameState(deckOneCopy, deckTwoCopy);
+        }
+
+        public Player GetStepWinner(int playerOneCard, int playerTwoCard)
+        {
+            if (CanRecurse(playerOneCard, playerTwoCard))
+            {
+                return RunGame(StateForRecursion(playerOneCard, playerTwoCard)).GetGameWinner();
+            }
+
+            if (playerOneCard > playerTwoCard)
+                return Player.One;
+
+            if (playerTwoCard > playerOneCard)
+                return Player.Two;
+
+            //should not happen...
+            throw new Exception("Both players have equal cards!");
+        }
+
+        public static GameState RunGame(GameState state)
+        {
+            HashSet<GameState> stateHistory = new HashSet<GameState>();
+
+            while (!state.IsGameFinished)
+            {
+                if (stateHistory.Contains(state))
+                {
+                    return state;
+                }
+                stateHistory.Add(state);
+                state = state.Step();
+            }
+
+            return state;
+        }
+
+        private bool CanRecurse(int playerOneCard, int playerTwoCard)
+        {
+            return _playerOneDeck.Count() - 1 >= playerOneCard && _playerTwoDeck.Count() - 1 >= playerTwoCard;
+        }
+
+        private GameState StateForRecursion(int playerOneCard, int playerTwoCard)
+        {
+            var newDeckOne = _playerOneDeck.Skip(1).Take(playerOneCard).ToList();
+            var newDeckTwo = _playerTwoDeck.Skip(1).Take(playerTwoCard).ToList();
+
+            return new GameState(newDeckOne, newDeckTwo);
         }
 
         public static GameState Parse(string input)
@@ -83,6 +144,15 @@ namespace _22a
             var playerTwoCards = playerTwoDeckString.Split("\r\n").Skip(1).Select(int.Parse);
 
             return new GameState(playerOneCards, playerTwoCards);
+        }
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"Players 1's deck: {string.Join(", ", _playerOneDeck)}");
+            sb.AppendLine($"Players 2's deck: {string.Join(", ", _playerTwoDeck)}");
+
+            return sb.ToString();
         }
 
         public override bool Equals(object obj)
