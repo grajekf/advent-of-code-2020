@@ -9,35 +9,31 @@ namespace _23b
         static void Main(string[] args)
         {
             var input = "364289715";
-            // var input = "389125467";
             var inputArray = input.Select(c => int.Parse(c.ToString())).ToArray();
             var minValue = inputArray.Min();
             var maxValue = inputArray.Max();
             var inputList = new LinkedList<int>(inputArray);
 
-            for(int i = maxValue + 1; i <= 1000000; i++)
+            for (int i = maxValue + 1; i <= 1_000_000; i++)
             {
                 inputList.AddLast(i);
+                if (i > maxValue)
+                    maxValue = i;
+            }
+
+            var nodeDictionary = new LinkedListNode<int>[inputList.Count + 1];
+
+            var it = inputList.First;
+            while (it != null)
+            {
+                nodeDictionary[it.Value] = it;
+                it = it.Next;
             }
 
             var currentCup = inputList.First;
 
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 10000000; i++)
             {
-
-                // foreach (var n in inputList)
-                // {
-                //     if (n == currentCup.Value)
-                //     {
-                //         Console.Write($"({n}) ");
-                //     }
-                //     else
-                //     {
-                //         Console.Write($"{n} ");
-                //     }
-                // }
-                // Console.WriteLine();
-
                 Stack<LinkedListNode<int>> removed = new Stack<LinkedListNode<int>>();
                 for (int r = 0; r < 3; r++)
                 {
@@ -47,13 +43,17 @@ namespace _23b
                 }
 
                 var valueToFind = currentCup.Value - 1;
-                var destination = inputList.Find(valueToFind);
-                while (destination == null)
+                if (valueToFind < minValue)
+                    valueToFind = maxValue;
+                var destination = nodeDictionary[valueToFind];
+                while (removed.Any(r => r.Value == destination.Value))
                 {
                     valueToFind--;
                     if (valueToFind < minValue)
                         valueToFind = maxValue;
-                    destination = inputList.Find(valueToFind);
+                    destination = nodeDictionary[valueToFind];
+                    if (destination == null)
+                        Console.WriteLine(valueToFind);
                 }
 
                 while (removed.Count > 0)
@@ -67,13 +67,11 @@ namespace _23b
             }
 
             var oneNode = inputList.Find(1);
-            var resultIt = inputList.GetNextCircullar(oneNode);
+            var firstAfter = inputList.GetNextCircullar(oneNode);
+            var secondAfter = inputList.GetNextCircullar(firstAfter);
 
-            while (resultIt.Value != 1)
-            {
-                Console.Write(resultIt.Value);
-                resultIt = inputList.GetNextCircullar(resultIt);
-            }
+            long result = (long)firstAfter.Value * (long)secondAfter.Value;
+            Console.WriteLine(result);
         }
 
 
