@@ -20,6 +20,22 @@ namespace _01
                         Console.WriteLine(a * b);
                 }
             }
+
+            for (int i = 0; i < inputList.Count; i++)
+            {
+                var a = inputList[i];
+                for (int j = i + 1; j < inputList.Count; j++)
+                {
+                    var b = inputList[j];
+                    for (int k = j + 1; k < inputList.Count; k++)
+                    {
+                        var c = inputList[k];
+                        if (a + b + c == 2020)
+                            Console.WriteLine((long)a * (long)b * (long)c);
+                    }
+
+                }
+            }
         }
     }
 }
