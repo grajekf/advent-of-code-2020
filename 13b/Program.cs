@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Numerics;
 
 namespace _13b
 {
@@ -18,17 +19,18 @@ namespace _13b
                 .Select(x => (Id: x.First.Id, Minutes: x.First.Minutes, Letter: x.Second))
                 .ToList();
 
-            foreach (var x in validIds)
+            BigInteger currentNumber = 13;
+            BigInteger currentInterval = 13;
+
+            foreach (var x in validIds.Skip(1))
             {
                 var modulo = GetModulo(x);
-                Console.WriteLine($"t = {x.Id}{x.Letter} + {modulo} ({x.Minutes})");
-            }
+                while (currentNumber % x.Id != modulo)
+                    currentNumber += currentInterval;
 
-            // Console.WriteLine("===============================");
-            // foreach (var x in validIds)
-            // {
-            //     Console.WriteLine($"t = {x.Id}{x.Letter} + {x.Minutes}");
-            // }
+                Console.WriteLine(currentNumber);
+                currentInterval = currentInterval * x.Id;
+            }
         }
 
         static int GetModulo((int Id, int Minutes, char Letter) x)
