@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 
 namespace _03
 {
@@ -20,6 +21,17 @@ namespace _03
             }
 
             Console.WriteLine(CountTrees(slope, 3, 1));
+
+            var pairsToCheck = new (int Dx, int Dy)[]
+            {
+                (1, 1),
+                (3, 1),
+                (5, 1),
+                (7, 1),
+                (1, 2)
+            };
+
+            Console.WriteLine(pairsToCheck.Aggregate(1L, (r, pair) => r * (long)CountTrees(slope, pair.Dx, pair.Dy)));
 
 
         }
