@@ -12,6 +12,7 @@ namespace _02a
 
             var passwords = lines.Select(l => PasswordWithRule.Parse(l)).ToList();
             Console.WriteLine(passwords.Count(p => p.IsValid()));
+            Console.WriteLine(passwords.Count(p => p.IsValidSecond()));
         }
     }
 
@@ -50,6 +51,17 @@ namespace _02a
         {
             var charCount = Password.Count(c => c == Character);
             return charCount >= From && charCount <= To;
+        }
+
+        public bool IsValidSecond()
+        {
+            var equalCount = 0;
+            if (Password[From - 1] == Character)
+                equalCount++;
+            if (Password[To - 1] == Character)
+                equalCount++;
+
+            return equalCount == 1;
         }
     }
 }
