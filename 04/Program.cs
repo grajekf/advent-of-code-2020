@@ -13,6 +13,27 @@ namespace _04
                 .Select(p => p.Replace("\r\n", " "))
                 .ToList();
 
+            Console.WriteLine(passports.Count(p => IsValid(p)));
+
+        }
+
+        static bool IsValid(string passport)
+        {
+            var partsDict = passport.Split(" ").Select(part =>
+            {
+                var partSplit = part.Split(":");
+                return (partSplit[0], partSplit[1]);
+            }).ToDictionary(p => p.Item1, p => p.Item2);
+
+            return
+                partsDict.ContainsKey("byr")
+                && partsDict.ContainsKey("iyr")
+                && partsDict.ContainsKey("eyr")
+                && partsDict.ContainsKey("hgt")
+                && partsDict.ContainsKey("hcl")
+                && partsDict.ContainsKey("ecl")
+                && partsDict.ContainsKey("pid");
         }
     }
+
 }
