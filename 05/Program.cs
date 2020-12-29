@@ -9,7 +9,12 @@ namespace _05
         static void Main(string[] args)
         {
             var seats = File.ReadAllLines("input.txt");
-            Console.WriteLine(seats.Max(s => CalculateId(s)));
+            Console.WriteLine(seats.Max(CalculateId));
+
+            int min = seats.Min(CalculateId);
+            var seatIds = seats.Select(CalculateId).ToHashSet();
+
+            Console.WriteLine(Enumerable.Range(min, 1000).First(s => !seatIds.Contains(s)));
         }
 
         static int CalculateId(string seat)
